@@ -8,14 +8,17 @@ import { FileText, Search, Plus } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface SidebarProps {
     onSelectPrompt: (prompt: Prompt) => void;
     onCreateNew: () => void;
+    className?: string;
 }
 
-export function Sidebar({ onSelectPrompt, onCreateNew }: SidebarProps) {
+export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps) {
     const [search, setSearch] = useState('');
+    const [colorTheme, setColorTheme] = useState('blue');
 
     // Live query to automatically update when DB changes
     const prompts = useLiveQuery(
@@ -27,8 +30,27 @@ export function Sidebar({ onSelectPrompt, onCreateNew }: SidebarProps) {
         [search]
     );
 
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('lexstash-color-theme');
+        if (savedTheme) {
+            setColorTheme(savedTheme);
+        }
+    }, []);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', colorTheme);
+        localStorage.setItem('lexstash-color-theme', colorTheme);
+    }, [colorTheme]);
+
+    const themes = [
+        { name: 'blue', color: 'bg-blue-500' },
+        { name: 'purple', color: 'bg-purple-500' },
+        { name: 'green', color: 'bg-green-500' },
+        { name: 'orange', color: 'bg-orange-500' },
+    ];
+
     return (
-        <div className="w-64 border-r bg-muted/10 flex flex-col h-screen sticky top-0">
+        <div className={cn("w-64 border-r bg-muted/10 flex flex-col h-screen sticky top-0", className)}>
             <div className="p-4 border-b flex items-center justify-between bg-background/50 backdrop-blur-sm">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={onCreateNew}>
                     <Logo size={28} />
@@ -80,8 +102,18 @@ export function Sidebar({ onSelectPrompt, onCreateNew }: SidebarProps) {
 
             <div className="p-4 border-t">
                 <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Theme</span>
-                    <ModeToggle />
+                    <span className="text-xs font-medium text-muted-foreground">Palette</span>
+                    <div className="flex gap-2">
+                        {themes.map((t) => (
+                            <button
+                                key={t.name}
+                                onClick={() => setColorTheme(t.name)}
+                                className={`w-4 h-4 rounded-full ${t.color} ring-offset-2 ring-offset-background transition-all ${colorTheme === t.name ? 'ring-2 ring-foreground scale-110' : 'hover:scale-110 opacity-70 hover:opacity-100'
+                                    }`}
+                                title={t.name.charAt(0).toUpperCase() + t.name.slice(1)}
+                            />
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

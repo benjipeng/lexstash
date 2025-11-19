@@ -480,25 +480,37 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
 
     return (
         <div className="max-w-3xl mx-auto p-6">
-            <div className="mb-6 flex justify-between items-center">
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 w-full"
+                    className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 w-full md:w-auto flex-1 min-w-0"
+                    placeholder="Untitled Prompt"
                 />
-                <div className="flex gap-2">
-                    <button onClick={() => setShowPreview(true)} className="px-3 py-2 text-muted-foreground hover:text-foreground rounded-md" title="Preview">
+                <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                    <button onClick={() => setShowPreview(true)} className="px-3 py-2 text-muted-foreground hover:text-foreground rounded-md shrink-0" title="Preview">
                         <Eye size={20} />
                     </button>
-                    <div className="w-px h-6 bg-border mx-2" />
-                    <button onClick={handleSave} className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">
+                    <div className="w-px h-6 bg-border mx-2 shrink-0" />
+                    <button onClick={handleSave} className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 shrink-0">
                         Save
                     </button>
-                    <div className="w-px h-6 bg-border mx-2" />
-                    <button onClick={() => addBlock('text')} className="px-3 py-1 bg-secondary rounded text-sm flex items-center gap-1"><Plus size={14} /> Text</button>
-                    <button onClick={() => addBlock('container')} className="px-3 py-1 bg-secondary rounded text-sm flex items-center gap-1"><Plus size={14} /> Container</button>
-                    <button onClick={() => addBlock('reference')} className="px-3 py-1 bg-secondary rounded text-sm flex items-center gap-1"><Plus size={14} /> Ref</button>
+                    <div className="w-px h-6 bg-border mx-2 shrink-0" />
+                    <div className="flex gap-2 shrink-0">
+                        <button onClick={() => addBlock('text')} className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm flex items-center gap-1 whitespace-nowrap transition-colors">
+                            <Plus size={14} />
+                            <span className="hidden sm:inline">Text</span>
+                        </button>
+                        <button onClick={() => addBlock('container')} className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm flex items-center gap-1 whitespace-nowrap transition-colors">
+                            <Plus size={14} />
+                            <span className="hidden sm:inline">Container</span>
+                        </button>
+                        <button onClick={() => addBlock('reference')} className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm flex items-center gap-1 whitespace-nowrap transition-colors">
+                            <Plus size={14} />
+                            <span className="hidden sm:inline">Ref</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
