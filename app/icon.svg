@@ -1,0 +1,59 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        .primary { fill: #333; }
+        .primary-stroke { stroke: #333; }
+        .primary-light { fill: rgba(51, 51, 51, 0.1); }
+        .primary-medium { fill: rgba(51, 51, 51, 0.7); }
+        .primary-faint { fill: rgba(51, 51, 51, 0.4); }
+
+        @media (prefers-color-scheme: dark) {
+            .primary { fill: #fff; }
+            .primary-stroke { stroke: #fff; }
+            .primary-light { fill: rgba(255, 255, 255, 0.1); }
+            .primary-medium { fill: rgba(255, 255, 255, 0.7); }
+            .primary-faint { fill: rgba(255, 255, 255, 0.4); }
+        }
+    </style>
+    
+    <!-- Base Container Block -->
+    <rect
+        x="4"
+        y="4"
+        width="24"
+        height="24"
+        rx="6"
+        class="primary-stroke primary-light"
+        stroke-width="2"
+    />
+    
+    <!-- Inner Blocks -->
+    <g>
+        <!-- Top Block -->
+        <rect
+            x="9"
+            y="9"
+            width="14"
+            height="4"
+            rx="1"
+            class="primary"
+        />
+        <!-- Middle Block -->
+        <rect
+            x="9"
+            y="15"
+            width="10"
+            height="4"
+            rx="1"
+            class="primary-medium"
+        />
+        <!-- Bottom Block -->
+        <rect
+            x="9"
+            y="21"
+            width="8"
+            height="2"
+            rx="1"
+            class="primary-faint"
+        />
+    </g>
+</svg>
