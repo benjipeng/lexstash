@@ -116,9 +116,20 @@ export function Block({ block, currentPromptId, onUpdate, onDelete, depth = 0, i
                 <div className="flex-1 space-y-2">
                     {block.type === 'text' && (
                         <textarea
-                            className="w-full min-h-[60px] p-2 rounded bg-transparent border-none focus:ring-0 resize-y"
+                            ref={(el) => {
+                                if (el) {
+                                    el.style.height = 'auto';
+                                    el.style.height = el.scrollHeight + 'px';
+                                }
+                            }}
+                            className="w-full min-h-[40px] p-2 rounded bg-transparent border-none focus:ring-0 resize-none overflow-hidden leading-relaxed"
                             value={block.content || ''}
-                            onChange={(e) => onUpdate(block.id, { content: e.target.value })}
+                            onChange={(e) => {
+                                onUpdate(block.id, { content: e.target.value });
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
+                            rows={1}
                             placeholder="Enter text..."
                             onPointerDown={(e) => e.stopPropagation()}
                         />
