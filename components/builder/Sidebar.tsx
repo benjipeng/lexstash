@@ -4,12 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db';
 import { Prompt } from '@/types/prompt';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FileText, Search, Plus, Settings } from 'lucide-react';
+import { FileText, Search, Plus, Settings, LogIn, LogOut } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { DataManagementModal } from '@/components/DataManagementModal';
+import { useAuth } from '@/components/auth-provider';
 
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
     const [search, setSearch] = useState('');
     const [colorTheme, setColorTheme] = useState('blue');
     const [showDataModal, setShowDataModal] = useState(false);
+    const { user, signOut } = useAuth();
 
 
     // Live query to automatically update when DB changes
@@ -119,8 +121,8 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
                 )}
             </div>
 
-            <div className="p-4 border-t">
-                <div className="flex items-center justify-between mb-4">
+            <div className="p-4 border-t space-y-4">
+                <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-muted-foreground">Palette</span>
                     <div className="flex gap-2">
                         {themes.map((t) => (
@@ -139,6 +141,30 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
                     <Settings size={14} />
                     Manage Data
                 </Button>
+
+                <div className="pt-2 border-t">
+                    {user ? (
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+                                {user.email?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{user.email}</p>
+                                <button
+                                    onClick={() => signOut()}
+                                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                >
+                                    <LogOut size={10} /> Sign out
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <Button variant="default" size="sm" className="w-full gap-2" onClick={() => window.location.href = '/login'}>
+                            <LogIn size={14} />
+                            Sign In / Sync
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <DataManagementModal
@@ -148,4 +174,3 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
         </div>
     );
 }
-
