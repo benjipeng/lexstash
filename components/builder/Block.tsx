@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Block as BlockType } from '@/types/prompt';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -23,6 +23,17 @@ interface BlockProps {
 }
 
 export function Block({ block, currentPromptId, onUpdate, onDelete, depth = 0, isOverlay, dropIndicator }: BlockProps) {
+    const [isExpanded, setIsExpanded] = useState(true);
+    const [isValidReference, setIsValidReference] = useState(true);
+
+    useEffect(() => {
+        if (block.type === 'reference' && block.referenceId && currentPromptId) {
+            canAddReference(currentPromptId, block.referenceId).then(setIsValidReference);
+        } else {
+            setIsValidReference(true);
+        }
+    }, [block.referenceId, currentPromptId, block.type]);
+
     const {
         attributes,
         listeners,
@@ -176,7 +187,7 @@ export function Block({ block, currentPromptId, onUpdate, onDelete, depth = 0, i
                                         <option key={p.id} value={p.id}>{p.title}</option>
                                     ))}
                                 </select>
-                                {canAddReference(currentPromptId || '', block.referenceId || '') ? (
+                                {isValidReference ? (
                                     <span className="text-xs text-green-500">Valid</span>
                                 ) : (
                                     <span className="text-xs text-red-500">Cycle Detected</span>

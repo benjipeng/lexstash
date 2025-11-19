@@ -439,7 +439,7 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
                         list[i] = { ...list[i], ...updates };
                         return;
                     }
-                    if (list[i].children) update(list[i].children);
+                    if (list[i].children) update(list[i].children!);
                 }
             }
             update(clone);

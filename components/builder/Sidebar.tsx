@@ -4,15 +4,17 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db';
 import { Prompt } from '@/types/prompt';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FileText, Search } from 'lucide-react';
+import { FileText, Search, Plus } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Logo } from '@/components/Logo';
+import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
     onSelectPrompt: (prompt: Prompt) => void;
+    onCreateNew: () => void;
 }
 
-export function Sidebar({ onSelectPrompt }: SidebarProps) {
+export function Sidebar({ onSelectPrompt, onCreateNew }: SidebarProps) {
     const [search, setSearch] = useState('');
 
     // Live query to automatically update when DB changes
@@ -28,11 +30,16 @@ export function Sidebar({ onSelectPrompt }: SidebarProps) {
     return (
         <div className="w-64 border-r bg-muted/10 flex flex-col h-screen sticky top-0">
             <div className="p-4 border-b flex items-center justify-between bg-background/50 backdrop-blur-sm">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={onCreateNew}>
                     <Logo size={28} />
                     <h1 className="font-bold text-xl tracking-tight">Lexstash</h1>
                 </div>
-                <ModeToggle />
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={onCreateNew} title="New Prompt">
+                        <Plus size={18} />
+                    </Button>
+                    <ModeToggle />
+                </div>
             </div>
             <div className="p-4 border-b">
                 <div className="relative">
