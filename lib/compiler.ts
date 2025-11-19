@@ -5,7 +5,7 @@ export async function compilePrompt(prompt: Prompt, values?: Record<string, stri
     return compileBlocks(prompt.blocks, values);
 }
 
-export async function compileBlocks(blocks: Block[], values?: Record<string, string>): Promise<string> {
+export async function compileBlocks(blocks: Block[], values?: Record<string, string>, isRoot: boolean = true): Promise<string> {
     let output = '';
 
     for (const block of blocks) {
@@ -26,21 +26,36 @@ export async function compileBlocks(blocks: Block[], values?: Record<string, str
             const closeTag = block.metadata?.tag ? `</${block.metadata.tag}>` : '';
 
             const childrenContent = block.children
-                ? await compileBlocks(block.children, values)
+                ? await compileBlocks(block.children, values, false)
                 : '';
 
-            output += `${openTag}\n${childrenContent}${closeTag}\n`;
+            // Ensure childrenContent ends with a newline if it's not empty, so closeTag starts on a new line
+            const formattedChildren = childrenContent.endsWith('\n') || childrenContent === ''
+                ? childrenContent
+                : childrenContent + '\n';
+
+            output += `${openTag}\n${formattedChildren}${closeTag}\n`;
         } else if (block.type === 'reference') {
-            // In a real app, we'd fetch the referenced prompt here.
-            // For now, we'll just put a placeholder or try to fetch if we had async access
-            // Since this is a synchronous compilation in this simplified version (or async but no DB access here easily without circular deps)
-            // We will assume references are already resolved or just print ID.
-            // Ideally, the caller should resolve references before compiling, OR we inject a resolver.
-            output += `{{Ref: ${block.referenceId}}}\n`;
+            if (block.referenceId) {
+                try {
+                    const referencedPrompt = await db.prompts.get(block.referenceId);
+                    if (referencedPrompt) {
+                        const refContent = await compileBlocks(referencedPrompt.blocks, values, false);
+                        output += refContent + '\n';
+                    } else {
+                        output += `{{Ref: ${block.referenceId} (Not Found)}}\n`;
+                    }
+                } catch (error) {
+                    console.error(`Failed to resolve reference ${block.referenceId}`, error);
+                    output += `{{Ref: ${block.referenceId} (Error)}}\n`;
+                }
+            } else {
+                output += `{{Ref: Unknown}}\n`;
+            }
         }
     }
 
-    return output.trim();
+    return isRoot ? output.trim() : output;
 }
 
 export function extractVariables(blocks: Block[]): string[] {

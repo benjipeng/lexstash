@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db';
 import { Prompt } from '@/types/prompt';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FileText, Search, Plus } from 'lucide-react';
+import { FileText, Search, Plus, Settings } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { DataManagementModal } from '@/components/DataManagementModal';
+
 
 interface SidebarProps {
     onSelectPrompt: (prompt: Prompt) => void;
@@ -19,13 +21,18 @@ interface SidebarProps {
 export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps) {
     const [search, setSearch] = useState('');
     const [colorTheme, setColorTheme] = useState('blue');
+    const [showDataModal, setShowDataModal] = useState(false);
+
 
     // Live query to automatically update when DB changes
     const prompts = useLiveQuery(
         () => db.prompts
             .orderBy('updatedAt')
             .reverse()
-            .filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
+            .filter(p =>
+                p.title.toLowerCase().includes(search.toLowerCase()) ||
+                (p.tags && p.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
+            )
             .toArray(),
         [search]
     );
@@ -86,8 +93,20 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
                         <FileText size={16} className="text-muted-foreground group-hover:text-foreground" />
                         <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate">{prompt.title}</div>
-                            <div className="text-xs text-muted-foreground truncate">
-                                {new Date(prompt.updatedAt).toLocaleDateString()}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
+                                {prompt.tags && prompt.tags.length > 0 && (
+                                    <div className="flex gap-1 overflow-hidden">
+                                        {prompt.tags.slice(0, 2).map(tag => (
+                                            <span key={tag} className="px-1.5 py-0.5 bg-muted rounded-full text-[10px] truncate max-w-[60px]">
+                                                {tag}
+                                            </span>
+                                        ))}
+                                        {prompt.tags.length > 2 && (
+                                            <span className="text-[10px] self-center">+{prompt.tags.length - 2}</span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </button>
@@ -101,7 +120,7 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
             </div>
 
             <div className="p-4 border-t">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4">
                     <span className="text-xs font-medium text-muted-foreground">Palette</span>
                     <div className="flex gap-2">
                         {themes.map((t) => (
@@ -115,7 +134,18 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
                         ))}
                     </div>
                 </div>
+
+                <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setShowDataModal(true)}>
+                    <Settings size={14} />
+                    Manage Data
+                </Button>
             </div>
+
+            <DataManagementModal
+                isOpen={showDataModal}
+                onClose={() => setShowDataModal(false)}
+            />
         </div>
     );
 }
+

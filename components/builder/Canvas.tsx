@@ -80,6 +80,7 @@ const dropAnimation: DropAnimation = {
 
 export function Canvas({ prompt, onSave }: CanvasProps) {
     const [title, setTitle] = useState('Untitled Prompt');
+    const [tags, setTags] = useState<string[]>([]);
     const [blocks, setBlocks] = useState<BlockType[]>([]);
     const [showPreview, setShowPreview] = useState(false);
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -87,9 +88,11 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
     useEffect(() => {
         if (prompt) {
             setTitle(prompt.title);
+            setTags(prompt.tags || []);
             setBlocks(prompt.blocks);
         } else {
             setTitle('Untitled Prompt');
+            setTags([]);
             setBlocks([]);
         }
     }, [prompt]);
@@ -123,7 +126,7 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
             id,
             title,
             blocks,
-            tags: prompt?.tags || [],
+            tags,
             createdAt: prompt?.createdAt || Date.now(),
             updatedAt: Date.now(),
         });
@@ -481,13 +484,42 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
     return (
         <div className="max-w-3xl mx-auto p-6">
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 w-full md:w-auto flex-1 min-w-0"
-                    placeholder="Untitled Prompt"
-                />
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 w-full"
+                        placeholder="Untitled Prompt"
+                    />
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {tags.map(tag => (
+                            <span key={tag} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs flex items-center gap-1">
+                                {tag}
+                                <button
+                                    onClick={() => setTags(tags.filter(t => t !== tag))}
+                                    className="hover:text-destructive"
+                                >
+                                    &times;
+                                </button>
+                            </span>
+                        ))}
+                        <input
+                            type="text"
+                            placeholder="+ Add tag"
+                            className="text-xs bg-transparent border-none focus:outline-none focus:ring-0 min-w-[60px]"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const val = e.currentTarget.value.trim();
+                                    if (val && !tags.includes(val)) {
+                                        setTags([...tags, val]);
+                                        e.currentTarget.value = '';
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
                 <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                     <button onClick={() => setShowPreview(true)} className="px-3 py-2 text-muted-foreground hover:text-foreground rounded-md shrink-0" title="Preview">
                         <Eye size={20} />
