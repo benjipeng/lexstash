@@ -41,8 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signInWithGoogle = async () => {
         // Construct the URL based on the current location to handle basePath automatically
-        // If we are at /lexstash/, this will be /lexstash/auth/callback
-        const redirectUrl = new URL('/auth/callback', window.location.href).toString();
+        // If we are at /lexstash/login, 'auth/callback' -> /lexstash/auth/callback
+        // If we use '/auth/callback', it goes to /auth/callback (stripping /lexstash)
+        // We use 'auth/callback' (relative) to respect the current path structure.
+        // Note: We assume we are at a route like /login or / (root).
+        // To be safe, we can use window.location.origin + window.location.pathname (stripping the last segment if needed)
+        // But simpler: if we are at /lexstash/login, we want /lexstash/auth/callback.
+        // Let's use the origin + basePath logic if possible, or just rely on relative resolution from root?
+        // Actually, safer to just grab the origin and append the known basePath if in prod.
+
+        const isProd = process.env.NODE_ENV === 'production';
+        const basePath = isProd ? '/lexstash' : '';
+        const redirectUrl = `${window.location.origin}${basePath}/auth/callback`;
 
         await supabase.auth.signInWithOAuth({
             provider: 'google',
