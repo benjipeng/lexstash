@@ -28,12 +28,15 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Cloud, HardDrive, UploadCloud } from 'lucide-react';
 import { PreviewDialog } from './PreviewDialog';
 
 interface CanvasProps {
     prompt?: Prompt;
-    onSave: () => void;
+    onSave: (prompt: Prompt) => void;
+    activeLibrary?: 'local' | 'cloud';
+    onUpload?: (prompt: Prompt) => void;
+    onLibraryChange?: (lib: 'local' | 'cloud') => void;
 }
 
 // Helper to find a block by ID in the tree
@@ -78,7 +81,7 @@ const dropAnimation: DropAnimation = {
     }),
 };
 
-export function Canvas({ prompt, onSave }: CanvasProps) {
+export function Canvas({ prompt, onSave, activeLibrary, onUpload, onLibraryChange }: CanvasProps) {
     const [title, setTitle] = useState('Untitled Prompt');
     const [tags, setTags] = useState<string[]>([]);
     const [blocks, setBlocks] = useState<BlockType[]>([]);
@@ -122,15 +125,15 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
 
     const handleSave = async () => {
         const id = prompt?.id || crypto.randomUUID();
-        await db.prompts.put({
+        const promptData: Prompt = {
             id,
             title,
             blocks,
             tags,
             createdAt: prompt?.createdAt || Date.now(),
             updatedAt: Date.now(),
-        });
-        onSave();
+        };
+        onSave(promptData);
     };
 
     // State for the visual drop indicator
@@ -483,18 +486,20 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
 
     return (
         <div className="max-w-3xl mx-auto p-6">
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="mb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="flex-1 min-w-0 flex flex-col gap-2">
-                    <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 w-full"
-                        placeholder="Untitled Prompt"
-                    />
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="text-3xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 w-full p-0"
+                            placeholder="Untitled Prompt"
+                        />
+                    </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         {tags.map(tag => (
-                            <span key={tag} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs flex items-center gap-1">
+                            <span key={tag} className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs flex items-center gap-1">
                                 {tag}
                                 <button
                                     onClick={() => setTags(tags.filter(t => t !== tag))}
@@ -507,7 +512,7 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
                         <input
                             type="text"
                             placeholder="+ Add tag"
-                            className="text-xs bg-transparent border-none focus:outline-none focus:ring-0 min-w-[60px]"
+                            className="text-sm bg-transparent border-none focus:outline-none focus:ring-0 min-w-[60px] p-0 text-muted-foreground"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     const val = e.currentTarget.value.trim();
@@ -520,27 +525,87 @@ export function Canvas({ prompt, onSave }: CanvasProps) {
                         />
                     </div>
                 </div>
-                <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-                    <button onClick={() => setShowPreview(true)} className="px-3 py-2 text-muted-foreground hover:text-foreground rounded-md shrink-0" title="Preview">
-                        <Eye size={20} />
+
+                <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar pt-1">
+                    {activeLibrary && (
+                        <>
+                            <button
+                                onClick={() => {
+                                    if (!prompt && onLibraryChange) {
+                                        onLibraryChange(activeLibrary === 'cloud' ? 'local' : 'cloud');
+                                    }
+                                }}
+                                className={`h-7 flex items-center gap-1.5 px-3 rounded-full text-xs font-medium border transition-colors shrink-0 ${!prompt ? 'cursor-pointer hover:opacity-80' : ''
+                                    } ${activeLibrary === 'cloud'
+                                        ? 'bg-primary/10 text-primary border-primary/20 dark:bg-primary/20 dark:text-primary dark:border-primary/30'
+                                        : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700'
+                                    }`}
+                                title={!prompt ? "Click to switch storage" : "Storage location"}
+                            >
+                                {activeLibrary === 'cloud' ? <Cloud size={14} /> : <HardDrive size={14} />}
+                                <span>
+                                    {activeLibrary === 'cloud' ? 'Cloud' : 'Local'}
+                                </span>
+                            </button>
+                            <div className="w-px h-4 bg-border mx-1 shrink-0" />
+                        </>
+                    )}
+
+                    {/* Upload Button */}
+                    {activeLibrary === 'local' && onUpload && prompt && (
+                        <>
+                            <button
+                                onClick={() => onUpload(prompt)}
+                                className="h-7 px-3 text-primary bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:text-primary dark:hover:bg-primary/30 rounded-md shrink-0 flex items-center gap-2 transition-colors text-xs font-medium"
+                                title="Upload to Cloud"
+                            >
+                                <UploadCloud size={14} />
+                                <span className="hidden sm:inline">Upload</span>
+                            </button>
+                            <div className="w-px h-4 bg-border mx-1 shrink-0" />
+                        </>
+                    )}
+
+                    <button
+                        onClick={() => setShowPreview(true)}
+                        className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-md shrink-0 transition-colors"
+                        title="Preview"
+                    >
+                        <Eye size={16} />
                     </button>
-                    <div className="w-px h-6 bg-border mx-2 shrink-0" />
-                    <button onClick={handleSave} className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 shrink-0">
+
+                    <div className="w-px h-4 bg-border mx-1 shrink-0" />
+
+                    <button
+                        onClick={handleSave}
+                        className="h-7 px-3 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:bg-primary/90 shrink-0 shadow-sm transition-colors"
+                    >
                         Save
                     </button>
-                    <div className="w-px h-6 bg-border mx-2 shrink-0" />
-                    <div className="flex gap-2 shrink-0">
-                        <button onClick={() => addBlock('text')} className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm flex items-center gap-1 whitespace-nowrap transition-colors">
+
+                    <div className="w-px h-4 bg-border mx-1 shrink-0" />
+
+                    <div className="flex gap-1 shrink-0 bg-secondary/30 p-1 rounded-lg border border-border/50">
+                        <button
+                            onClick={() => addBlock('text')}
+                            className="h-7 px-3 hover:bg-background hover:shadow-sm rounded-md text-xs font-medium flex items-center gap-1.5 transition-all"
+                        >
                             <Plus size={14} />
-                            <span className="hidden sm:inline">Text</span>
+                            <span>Text</span>
                         </button>
-                        <button onClick={() => addBlock('container')} className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm flex items-center gap-1 whitespace-nowrap transition-colors">
+                        <button
+                            onClick={() => addBlock('container')}
+                            className="h-7 px-3 hover:bg-background hover:shadow-sm rounded-md text-xs font-medium flex items-center gap-1.5 transition-all"
+                        >
                             <Plus size={14} />
-                            <span className="hidden sm:inline">Container</span>
+                            <span>Container</span>
                         </button>
-                        <button onClick={() => addBlock('reference')} className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm flex items-center gap-1 whitespace-nowrap transition-colors">
+                        <button
+                            onClick={() => addBlock('reference')}
+                            className="h-7 px-3 hover:bg-background hover:shadow-sm rounded-md text-xs font-medium flex items-center gap-1.5 transition-all"
+                        >
                             <Plus size={14} />
-                            <span className="hidden sm:inline">Ref</span>
+                            <span>Ref</span>
                         </button>
                     </div>
                 </div>

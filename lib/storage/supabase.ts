@@ -2,6 +2,8 @@ import { StorageProvider } from './types';
 import { createClient } from '@/lib/supabase/client';
 import { Prompt } from '@/types/prompt';
 
+const CLOUD_PROMPT_LIMIT = 30;
+
 export class SupabaseStorage implements StorageProvider {
     name: 'cloud' = 'cloud';
     private supabase = createClient();
@@ -38,6 +40,17 @@ export class SupabaseStorage implements StorageProvider {
 
         if (!user) throw new Error('User not authenticated');
 
+        // Check if this is a new prompt (INSERT) or update (UPDATE)
+        const existingPrompts = await this.getPrompts();
+        const isUpdate = existingPrompts.some(p => p.id === prompt.id);
+
+        // Only check limit for new prompts (not updates)
+        if (!isUpdate && existingPrompts.length >= CLOUD_PROMPT_LIMIT) {
+            throw new Error(
+                `Cloud library limit reached (${CLOUD_PROMPT_LIMIT} prompts max). Delete some prompts to upload more.`
+            );
+        }
+
         const { error } = await this.supabase
             .from('prompts')
             .upsert({
@@ -69,6 +82,20 @@ export class SupabaseStorage implements StorageProvider {
         // Bulk insert
         const { data: { user } } = await this.supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
+
+        // Check limit before importing
+        const existingPrompts = await this.getPrompts();
+        const newPrompts = prompts.filter(p => !existingPrompts.some(existing => existing.id === p.id));
+        const projectedTotal = existingPrompts.length + newPrompts.length;
+
+        if (projectedTotal > CLOUD_PROMPT_LIMIT) {
+            const available = CLOUD_PROMPT_LIMIT - existingPrompts.length;
+            const attempting = newPrompts.length;
+            throw new Error(
+                `Cannot import ${attempting} prompt(s). You have ${existingPrompts.length}/${CLOUD_PROMPT_LIMIT} prompts. ` +
+                `You can only import ${available} more. Delete at least ${attempting - available} prompt(s) first.`
+            );
+        }
 
         const rows = prompts.map(p => ({
             id: p.id,

@@ -9,6 +9,9 @@ import { PlusCircle, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/components/auth-provider";
+import { supabaseStorage } from "@/lib/storage/supabase";
+import { db } from "@/lib/db";
 
 type ViewState = 'welcome' | 'new' | 'edit';
 
@@ -16,21 +19,98 @@ export default function Home() {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | undefined>(undefined);
   const [view, setView] = useState<ViewState>('welcome');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeLibrary, setActiveLibrary] = useState<'local' | 'cloud'>('local');
+  const [cloudRefreshKey, setCloudRefreshKey] = useState(0);
 
   const handleCreateNew = () => {
     setSelectedPrompt(undefined);
     setView('new');
     setIsMobileMenuOpen(false);
+    // Keep the current active library or default to local?
+    // Plan says: "Clicking New Prompt -> Creates in the Currently Active Library"
+    // So we don't change activeLibrary here.
   };
 
-  const handleSelectPrompt = (prompt: Prompt) => {
+  const handleSelectPrompt = (prompt: Prompt, library: 'local' | 'cloud') => {
     setSelectedPrompt(prompt);
+    setActiveLibrary(library);
     setView('edit');
     setIsMobileMenuOpen(false);
   };
 
-  const handleSave = () => {
-    // Refresh logic if needed
+  const handleShowWelcome = () => {
+    setSelectedPrompt(undefined);
+    setView('welcome');
+    setIsMobileMenuOpen(false);
+  };
+
+
+  const handleSave = async (prompt: Prompt) => {
+    try {
+      if (activeLibrary === 'cloud') {
+        if (!user) {
+          alert("Please sign in to save to cloud.");
+          return;
+        }
+        await supabaseStorage.savePrompt({
+          ...prompt,
+          updatedAt: Date.now(),
+        });
+      } else {
+        await db.prompts.put(prompt);
+      }
+      // Optional: Show success toast
+    } catch (error) {
+      console.error("Save failed:", error);
+      alert("Save failed. Please try again.");
+    }
+  };
+
+  const { user } = useAuth();
+
+  const handleUpload = async (prompt: Prompt) => {
+    if (!user) {
+      alert("Please sign in to upload prompts.");
+      return;
+    }
+
+    try {
+      // 1. Check if exists
+      const existing = await supabaseStorage.getPrompt(prompt.id);
+
+      if (existing) {
+        // Simple confirm for now
+        const overwrite = window.confirm(
+          `A prompt with this ID already exists in the cloud ("${existing.title}").\n\nDo you want to overwrite it and delete your local copy?`
+        );
+        if (!overwrite) return;
+      }
+
+      // 2. Upload
+      await supabaseStorage.savePrompt({
+        ...prompt,
+        updatedAt: Date.now(),
+      });
+
+      // 3. Delete Local (Move)
+      await db.prompts.delete(prompt.id);
+
+      // 4. Update UI
+      setSelectedPrompt(undefined); // Deselect or switch to cloud view?
+      setActiveLibrary('cloud'); // Switch to cloud view to show the uploaded prompt
+      setView('welcome'); // Or stay in edit mode but load from cloud?
+      // Let's go to welcome for now to refresh the sidebar lists
+
+      // Trigger cloud library refresh
+      setCloudRefreshKey(prev => prev + 1);
+
+      alert("Prompt uploaded successfully!");
+    } catch (error) {
+      console.error("Upload failed:", error);
+      // Display the actual error message (e.g., limit error from supabaseStorage)
+      const errorMessage = error instanceof Error ? error.message : "Upload failed. Please try again.";
+      alert(errorMessage);
+    }
   };
 
   return (
@@ -40,36 +120,15 @@ export default function Home() {
         className="hidden md:flex"
         onSelectPrompt={handleSelectPrompt}
         onCreateNew={handleCreateNew}
+        onShowWelcome={handleShowWelcome}
+        activeLibrary={activeLibrary}
+        onLibraryChange={setActiveLibrary}
+        cloudRefreshKey={cloudRefreshKey}
       />
 
       {/* Mobile Header & Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Mobile Header */}
-        <div className="md:hidden h-14 border-b flex items-center px-4 justify-between bg-background shrink-0">
-          <div className="flex items-center gap-2">
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu size={20} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-72">
-                <Sidebar
-                  className="w-full h-full border-none"
-                  onSelectPrompt={handleSelectPrompt}
-                  onCreateNew={handleCreateNew}
-                />
-              </SheetContent>
-            </Sheet>
-            <div className="flex items-center gap-2">
-              <Logo size={24} />
-              <span className="font-bold text-lg tracking-tight">Lexstash</span>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleCreateNew}>
-            <PlusCircle size={20} />
-          </Button>
-        </div>
+        {/* ... (Mobile Header) ... */}
 
         {view === 'welcome' ? (
           <WelcomeScreen onCreateNew={handleCreateNew} />
@@ -93,6 +152,9 @@ export default function Home() {
                 key={selectedPrompt?.id || 'new'}
                 prompt={selectedPrompt}
                 onSave={handleSave}
+                activeLibrary={activeLibrary}
+                onUpload={handleUpload}
+                onLibraryChange={setActiveLibrary}
               />
             </div>
           </>

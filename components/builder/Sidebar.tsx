@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db';
 import { Prompt } from '@/types/prompt';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FileText, Search, Plus, Settings, LogIn, LogOut, Cloud, HardDrive } from 'lucide-react';
+import { FileText, Search, Plus, Settings, LogIn, LogOut, Cloud, HardDrive, Trash2 } from 'lucide-react';
 import { supabaseStorage } from '@/lib/storage/supabase';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Logo } from '@/components/Logo';
@@ -17,12 +17,16 @@ import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 
 interface SidebarProps {
-    onSelectPrompt: (prompt: Prompt) => void;
+    onSelectPrompt: (prompt: Prompt, library: 'local' | 'cloud') => void;
     onCreateNew: () => void;
+    onShowWelcome?: () => void;
     className?: string;
+    activeLibrary?: 'local' | 'cloud';
+    onLibraryChange?: (library: 'local' | 'cloud') => void;
+    cloudRefreshKey?: number;
 }
 
-export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps) {
+export function Sidebar({ onSelectPrompt, onCreateNew, onShowWelcome, className, activeLibrary, onLibraryChange, cloudRefreshKey }: SidebarProps) {
     const router = useRouter();
     const [search, setSearch] = useState('');
     const [colorTheme, setColorTheme] = useState('blue');
@@ -44,34 +48,72 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
         [search]
     );
 
-    // Fetch cloud prompts when user is logged in
+    // Load saved theme on mount
     useEffect(() => {
-        if (user) {
-            const fetchCloudPrompts = async () => {
-                try {
-                    const data = await supabaseStorage.getPrompts();
-                    setCloudPrompts(data);
-                } catch (error) {
-                    console.error('Failed to fetch cloud prompts:', error);
-                }
-            };
-            fetchCloudPrompts();
-        } else {
-            setCloudPrompts([]);
-        }
-    }, [user]);
-
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('lexstash-color-theme');
+        const savedTheme = localStorage.getItem('color-theme');
         if (savedTheme) {
             setColorTheme(savedTheme);
         }
     }, []);
 
+    // Apply theme changes
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', colorTheme);
-        localStorage.setItem('lexstash-color-theme', colorTheme);
+        localStorage.setItem('color-theme', colorTheme);
     }, [colorTheme]);
+
+    // Load cloud prompts when user is authenticated
+    useEffect(() => {
+        if (!user) {
+            setCloudPrompts([]);
+            return;
+        }
+
+        const loadCloudPrompts = async () => {
+            const prompts = await supabaseStorage.getPrompts();
+            setCloudPrompts(prompts);
+        };
+
+        loadCloudPrompts();
+    }, [user, cloudRefreshKey]);
+
+    // Helper to handle selection
+    const handleSelect = (prompt: Prompt, library: 'local' | 'cloud') => {
+        if (onLibraryChange) onLibraryChange(library);
+        onSelectPrompt(prompt, library);
+    };
+
+    // Helper to handle cloud prompt deletion
+    const handleDeleteCloud = async (promptId: string, promptTitle: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent selecting the prompt
+
+        const confirmed = window.confirm(`Delete "${promptTitle}" from cloud?\n\nThis action cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            await supabaseStorage.deletePrompt(promptId);
+            setCloudPrompts(cloudPrompts.filter(p => p.id !== promptId));
+        } catch (error) {
+            console.error('Delete failed:', error);
+            alert('Failed to delete prompt. Please try again.');
+        }
+    };
+
+    // Helper to handle local prompt deletion
+    const handleDeleteLocal = async (promptId: string, promptTitle: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent selecting the prompt
+
+        const confirmed = window.confirm(`Delete "${promptTitle}" from local storage?\n\nThis action cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            await db.prompts.delete(promptId);
+            // Dexie live query will automatically update the list
+        } catch (error) {
+            console.error('Delete failed:', error);
+            alert('Failed to delete prompt. Please try again.');
+        }
+    };
 
     const themes = [
         { name: 'blue', color: 'bg-blue-500' },
@@ -82,8 +124,9 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
 
     return (
         <div className={cn("w-64 border-r bg-muted/10 flex flex-col h-screen sticky top-0", className)}>
+            {/* ... (Header remains same) ... */}
             <div className="p-4 border-b flex items-center justify-between bg-background/50 backdrop-blur-sm">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={onCreateNew}>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={onShowWelcome}>
                     <Logo size={28} />
                     <h1 className="font-bold text-xl tracking-tight">Lexstash</h1>
                 </div>
@@ -111,33 +154,47 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
                 {/* Cloud Library Section */}
                 {user && (
                     <div className="space-y-1">
-                        <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                            <Cloud size={12} />
-                            Cloud Library
+                        <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Cloud size={12} className={activeLibrary === 'cloud' ? "text-primary" : ""} />
+                                <span className={activeLibrary === 'cloud' ? "text-primary" : ""}>Cloud Library</span>
+                            </div>
+                            <span className="text-muted-foreground">{cloudPrompts.length}/30</span>
                         </div>
                         {cloudPrompts.map((prompt) => (
-                            <button
-                                key={prompt.id}
-                                onClick={() => onSelectPrompt(prompt)}
-                                className="w-full text-left px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2 group transition-colors"
-                            >
-                                <FileText size={16} className="text-blue-500 group-hover:text-blue-600" />
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium truncate">{prompt.title}</div>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
-                                        {prompt.tags && prompt.tags.length > 0 && (
-                                            <div className="flex gap-1 overflow-hidden">
-                                                {prompt.tags.slice(0, 2).map(tag => (
-                                                    <span key={tag} className="px-1.5 py-0.5 bg-muted rounded-full text-[10px] truncate max-w-[60px]">
-                                                        {tag}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
+                            <div key={prompt.id} className="relative group">
+                                <button
+                                    onClick={() => handleSelect(prompt, 'cloud')}
+                                    className={cn(
+                                        "w-full text-left px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-colors",
+                                        activeLibrary === 'cloud' ? "bg-primary/10 dark:bg-primary/20" : ""
+                                    )}
+                                >
+                                    <FileText size={16} className="text-primary group-hover:text-primary/80 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium truncate">{prompt.title}</div>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
+                                            {prompt.tags && prompt.tags.length > 0 && (
+                                                <div className="flex gap-1 overflow-hidden">
+                                                    {prompt.tags.slice(0, 2).map(tag => (
+                                                        <span key={tag} className="px-1.5 py-0.5 bg-muted rounded-full text-[10px] truncate max-w-[60px]">
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </button>
+                                </button>
+                                <button
+                                    onClick={(e) => handleDeleteCloud(prompt.id, prompt.title, e)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                    title="Delete prompt"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
                         ))}
                         {cloudPrompts.length === 0 && (
                             <div className="px-3 py-2 text-xs text-muted-foreground italic">
@@ -150,35 +207,46 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
                 {/* Local Storage Section */}
                 <div className="space-y-1">
                     <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                        <HardDrive size={12} />
-                        Local Storage
+                        <HardDrive size={12} className={activeLibrary === 'local' ? "text-primary" : ""} />
+                        <span className={activeLibrary === 'local' ? "text-primary" : ""}>Local Storage</span>
                     </div>
                     {prompts?.map((prompt) => (
-                        <button
-                            key={prompt.id}
-                            onClick={() => onSelectPrompt(prompt)}
-                            className="w-full text-left px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2 group transition-colors"
-                        >
-                            <FileText size={16} className="text-muted-foreground group-hover:text-foreground" />
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium truncate">{prompt.title}</div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
-                                    {prompt.tags && prompt.tags.length > 0 && (
-                                        <div className="flex gap-1 overflow-hidden">
-                                            {prompt.tags.slice(0, 2).map(tag => (
-                                                <span key={tag} className="px-1.5 py-0.5 bg-muted rounded-full text-[10px] truncate max-w-[60px]">
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                            {prompt.tags.length > 2 && (
-                                                <span className="text-[10px] self-center">+{prompt.tags.length - 2}</span>
-                                            )}
-                                        </div>
-                                    )}
+                        <div key={prompt.id} className="relative group">
+                            <button
+                                onClick={() => handleSelect(prompt, 'local')}
+                                className={cn(
+                                    "w-full text-left px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2 transition-colors",
+                                    activeLibrary === 'local' ? "bg-accent" : ""
+                                )}
+                            >
+                                <FileText size={16} className="text-muted-foreground group-hover:text-foreground shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium truncate">{prompt.title}</div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
+                                        {prompt.tags && prompt.tags.length > 0 && (
+                                            <div className="flex gap-1 overflow-hidden">
+                                                {prompt.tags.slice(0, 2).map(tag => (
+                                                    <span key={tag} className="px-1.5 py-0.5 bg-muted rounded-full text-[10px] truncate max-w-[60px]">
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                                {prompt.tags.length > 2 && (
+                                                    <span className="text-[10px] self-center">+{prompt.tags.length - 2}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        </button>
+                            </button>
+                            <button
+                                onClick={(e) => handleDeleteLocal(prompt.id, prompt.title, e)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                title="Delete prompt"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
                     ))}
 
                     {prompts?.length === 0 && (
