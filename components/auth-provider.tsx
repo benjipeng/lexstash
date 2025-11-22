@@ -63,7 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 3. Redirect immediately
-        window.location.href = '/';
+        const isProd = process.env.NODE_ENV === 'production';
+        const basePath = isProd ? '/lexstash' : '';
+        window.location.href = `${basePath}/`;
     };
 
     const signInWithGoogle = async () => {
