@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/builder/Sidebar";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { Prompt } from "@/types/prompt";
 import { PlusCircle, Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/components/auth-provider";
@@ -128,9 +128,68 @@ export default function Home() {
       />
 
       {/* Mobile Header & Content */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* ... (Mobile Header) ... */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden md:hidden">
+        {/* Shared Sheet for Sidebar */}
+        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <SheetContent side="left" className="p-0 w-72">
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <Sidebar
+              className="w-full border-none"
+              onSelectPrompt={handleSelectPrompt}
+              onCreateNew={handleCreateNew}
+              onShowWelcome={handleShowWelcome}
+              activeLibrary={activeLibrary}
+              onLibraryChange={setActiveLibrary}
+              cloudRefreshKey={cloudRefreshKey}
+            />
+          </SheetContent>
+        </Sheet>
 
+        {view === 'welcome' ? (
+          <div className="relative flex-1 flex flex-col">
+            <div className="absolute top-4 left-4 z-10">
+              <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
+                <Menu size={20} />
+              </Button>
+            </div>
+            <WelcomeScreen onCreateNew={handleCreateNew} />
+          </div>
+        ) : (
+          <>
+            <div className="h-14 border-b flex items-center px-4 justify-between bg-card/50 backdrop-blur shrink-0">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" className="-ml-2" onClick={() => setIsMobileMenuOpen(true)}>
+                  <Menu size={20} />
+                </Button>
+                <div className="text-sm text-muted-foreground font-medium">
+                  {view === 'edit' && selectedPrompt ? 'Editing Prompt' : 'New Prompt'}
+                </div>
+              </div>
+              <button
+                onClick={handleCreateNew}
+                className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <PlusCircle size={16} />
+                <span className="hidden sm:inline">New Prompt</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              <Canvas
+                key={selectedPrompt?.id || 'new'}
+                prompt={selectedPrompt}
+                onSave={handleSave}
+                activeLibrary={activeLibrary}
+                onUpload={handleUpload}
+                onLibraryChange={setActiveLibrary}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Desktop Content (Canvas only, Sidebar is separate) */}
+      <div className="hidden md:flex flex-1 flex-col h-screen overflow-hidden">
         {view === 'welcome' ? (
           <WelcomeScreen onCreateNew={handleCreateNew} />
         ) : (
