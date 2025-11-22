@@ -13,6 +13,8 @@ import { DataManagementModal } from '@/components/DataManagementModal';
 import { useAuth } from '@/components/auth-provider';
 
 
+import { useRouter } from 'next/navigation';
+
 interface SidebarProps {
     onSelectPrompt: (prompt: Prompt) => void;
     onCreateNew: () => void;
@@ -20,6 +22,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps) {
+    const router = useRouter();
     const [search, setSearch] = useState('');
     const [colorTheme, setColorTheme] = useState('blue');
     const [showDataModal, setShowDataModal] = useState(false);
@@ -159,7 +162,7 @@ export function Sidebar({ onSelectPrompt, onCreateNew, className }: SidebarProps
                             </div>
                         </div>
                     ) : (
-                        <Button variant="default" size="sm" className="w-full gap-2" onClick={() => window.location.href = '/login'}>
+                        <Button variant="default" size="sm" className="w-full gap-2" onClick={() => router.push('/login')}>
                             <LogIn size={14} />
                             Sign In / Sync
                         </Button>

@@ -40,10 +40,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signInWithGoogle = async () => {
+        // Construct the URL based on the current location to handle basePath automatically
+        // If we are at /lexstash/, this will be /lexstash/auth/callback
+        const redirectUrl = new URL('/auth/callback', window.location.href).toString();
+
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback`,
+                redirectTo: redirectUrl,
             },
         });
     };
