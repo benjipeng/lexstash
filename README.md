@@ -2,7 +2,9 @@
 
 **Lexstash** is a modular, local-first prompt builder designed for the agentic age. It allows you to visually construct, organize, and compile complex LLM prompts using a drag-and-drop interface.
 
-![Lexstash Preview](/og-image.png)
+[![Deploy to GitHub Pages](https://github.com/benjipeng/lexstash/actions/workflows/deploy.yml/badge.svg)](https://github.com/benjipeng/lexstash/actions/workflows/deploy.yml)
+
+![Lexstash Preview](public/og-image.png)
 
 ## ✨ Features
 

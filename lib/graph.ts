@@ -1,11 +1,16 @@
 import { db } from '@/lib/db';
+import { supabaseStorage } from '@/lib/storage/supabase';
 import { Block, Prompt } from '@/types/prompt';
 
 /**
  * Checks if adding a reference to `childId` within `parentId` would create a cycle.
  * Returns true if safe, false if a cycle is detected.
  */
-export async function canAddReference(parentId: string, childId: string): Promise<boolean> {
+export async function canAddReference(
+    parentId: string,
+    childId: string,
+    library: 'local' | 'cloud' = 'local'
+): Promise<boolean> {
     if (parentId === childId) return false;
 
     const visited = new Set<string>();
@@ -19,7 +24,12 @@ export async function canAddReference(parentId: string, childId: string): Promis
 
         visited.add(currentId);
 
-        const prompt = await db.prompts.get(currentId);
+        visited.add(currentId);
+
+        const prompt = library === 'local'
+            ? await db.prompts.get(currentId)
+            : await supabaseStorage.getPrompt(currentId);
+
         if (!prompt) continue;
 
         // Find all references in this prompt

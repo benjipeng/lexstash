@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://benjipeng.github.io/lexstash"),
   title: "Lexstash - Modular Prompt Builder",
   description: "A local-first, visual prompt builder for the agentic age. Create, organize, and compile complex prompts with ease.",
   keywords: ["prompt engineering", "LLM", "AI", "visual builder", "local-first", "agentic"],

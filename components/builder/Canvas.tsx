@@ -633,6 +633,7 @@ export function Canvas({ prompt, onSave, activeLibrary, onUpload, onLibraryChang
                                 key={block.id}
                                 block={block}
                                 currentPromptId={prompt?.id}
+                                activeLibrary={activeLibrary}
                                 onUpdate={updateBlock}
                                 onDelete={deleteBlock}
                                 dropIndicator={dropIndicator}
@@ -646,6 +647,7 @@ export function Canvas({ prompt, onSave, activeLibrary, onUpload, onLibraryChang
                         <Block
                             block={activeBlock}
                             currentPromptId={prompt?.id}
+                            activeLibrary={activeLibrary}
                             onUpdate={() => { }}
                             onDelete={() => { }}
                             isOverlay
@@ -658,6 +660,7 @@ export function Canvas({ prompt, onSave, activeLibrary, onUpload, onLibraryChang
                 isOpen={showPreview}
                 onClose={() => setShowPreview(false)}
                 blocks={blocks}
+                activeLibrary={activeLibrary}
             />
         </div>
     );

@@ -31,11 +31,11 @@ export function Block({ block, currentPromptId, activeLibrary = 'local', onUpdat
 
     useEffect(() => {
         if (block.type === 'reference' && block.referenceId && currentPromptId) {
-            canAddReference(currentPromptId, block.referenceId).then(setIsValidReference);
+            canAddReference(currentPromptId, block.referenceId, activeLibrary).then(setIsValidReference);
         } else {
             setIsValidReference(true);
         }
-    }, [block.referenceId, currentPromptId, block.type]);
+    }, [block.referenceId, currentPromptId, block.type, activeLibrary]);
 
     const {
         attributes,

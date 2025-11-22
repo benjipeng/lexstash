@@ -11,9 +11,10 @@ interface PreviewDialogProps {
     isOpen: boolean;
     onClose: () => void;
     blocks: Block[];
+    activeLibrary?: 'local' | 'cloud';
 }
 
-export function PreviewDialog({ isOpen, onClose, blocks }: PreviewDialogProps) {
+export function PreviewDialog({ isOpen, onClose, blocks, activeLibrary = 'local' }: PreviewDialogProps) {
     const [compiledText, setCompiledText] = useState('');
     const [loading, setLoading] = useState(false);
     const [variables, setVariables] = useState<string[]>([]);
@@ -35,21 +36,21 @@ export function PreviewDialog({ isOpen, onClose, blocks }: PreviewDialogProps) {
                 return newValues;
             });
 
-            compileBlocks(blocks, values).then((text) => {
+            compileBlocks(blocks, values, activeLibrary).then((text) => {
                 setCompiledText(text);
                 setLoading(false);
             });
         }
-    }, [isOpen, blocks]);
+    }, [isOpen, blocks, activeLibrary]);
 
     // Re-compile when values change
     useEffect(() => {
         if (isOpen) {
-            compileBlocks(blocks, values).then((text) => {
+            compileBlocks(blocks, values, activeLibrary).then((text) => {
                 setCompiledText(text);
             });
         }
-    }, [values, isOpen, blocks]);
+    }, [values, isOpen, blocks, activeLibrary]);
 
     if (!isOpen) return null;
 
