@@ -12,6 +12,7 @@ import { Logo } from "@/components/Logo";
 import { useAuth } from "@/components/auth-provider";
 import { supabaseStorage } from "@/lib/storage/supabase";
 import { db } from "@/lib/db";
+import { uploadWithDependencies, executeUpload } from "@/lib/dependency-upload";
 
 type ViewState = 'welcome' | 'new' | 'edit';
 
@@ -75,43 +76,43 @@ export default function Home() {
     }
 
     try {
-      // 1. Check if exists
-      const existing = await supabaseStorage.getPrompt(prompt.id);
+      // 1. Analyze dependencies
+      const result = await uploadWithDependencies(prompt.id);
 
-      if (existing) {
-        // Simple confirm for now
-        const overwrite = window.confirm(
-          `A prompt with this ID already exists in the cloud ("${existing.title}").\n\nDo you want to overwrite it and delete your local copy?`
-        );
-        if (!overwrite) return;
+      // 2. Confirm if uploading multiple prompts
+      if (result.needsConfirmation) {
+        const promptList = result.toUpload.map(p => `• ${p.title}`).join('\n');
+        const message =
+          `This prompt references ${result.toUpload.length - 1} other prompt(s).\n\n` +
+          `The following will be uploaded:\n${promptList}` +
+          (result.alreadyInCloud > 0
+            ? `\n\n(${result.alreadyInCloud} referenced prompt(s) already in cloud)`
+            : '') +
+          `\n\nContinue?`;
+
+        if (!window.confirm(message)) return;
       }
 
-      // 2. Upload
-      await supabaseStorage.savePrompt({
-        ...prompt,
-        updatedAt: Date.now(),
-      });
-
-      // 3. Delete Local (Move)
-      await db.prompts.delete(prompt.id);
+      // 3. Execute upload (atomic - all or nothing)
+      await executeUpload(result.toUpload);
 
       // 4. Update UI
-      setSelectedPrompt(undefined); // Deselect or switch to cloud view?
-      setActiveLibrary('cloud'); // Switch to cloud view to show the uploaded prompt
-      setView('welcome'); // Or stay in edit mode but load from cloud?
-      // Let's go to welcome for now to refresh the sidebar lists
-
-      // Trigger cloud library refresh
+      setSelectedPrompt(undefined);
+      setActiveLibrary('cloud');
+      setView('welcome');
       setCloudRefreshKey(prev => prev + 1);
 
-      alert("Prompt uploaded successfully!");
+      const count = result.toUpload.length;
+      alert(`Successfully uploaded ${count} prompt${count > 1 ? 's' : ''}!`);
     } catch (error) {
       console.error("Upload failed:", error);
-      // Display the actual error message (e.g., limit error from supabaseStorage)
-      const errorMessage = error instanceof Error ? error.message : "Upload failed. Please try again.";
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Upload failed. Please try again.";
       alert(errorMessage);
     }
   };
+
 
   return (
     <main className="flex min-h-screen bg-background text-foreground">

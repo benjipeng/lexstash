@@ -30,7 +30,7 @@ export async function canAddReference(parentId: string, childId: string): Promis
     return true;
 }
 
-function getAllReferences(blocks: Block[]): string[] {
+export function getAllReferences(blocks: Block[]): string[] {
     const refs: string[] = [];
 
     for (const block of blocks) {

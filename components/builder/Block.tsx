@@ -8,10 +8,13 @@ import { cn } from '@/lib/utils';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { canAddReference } from '@/lib/graph';
+import { supabaseStorage } from '@/lib/storage/supabase';
+import { Prompt } from '@/types/prompt';
 
 interface BlockProps {
     block: BlockType;
     currentPromptId?: string;
+    activeLibrary?: 'local' | 'cloud';
     onUpdate: (id: string, updates: Partial<BlockType>) => void;
     onDelete: (id: string) => void;
     depth?: number;
@@ -22,7 +25,7 @@ interface BlockProps {
     } | null;
 }
 
-export function Block({ block, currentPromptId, onUpdate, onDelete, depth = 0, isOverlay, dropIndicator }: BlockProps) {
+export function Block({ block, currentPromptId, activeLibrary = 'local', onUpdate, onDelete, depth = 0, isOverlay, dropIndicator }: BlockProps) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [isValidReference, setIsValidReference] = useState(true);
 
@@ -43,8 +46,23 @@ export function Block({ block, currentPromptId, onUpdate, onDelete, depth = 0, i
         isDragging,
     } = useSortable({ id: block.id, data: { type: block.type, block } });
 
-    const allPrompts = useLiveQuery(() => db.prompts.toArray());
+    // Fetch prompts from appropriate storage
+    const localPrompts = useLiveQuery(() => db.prompts.toArray());
+    const [cloudPrompts, setCloudPrompts] = useState<Prompt[]>([]);
     const [error, setError] = React.useState<string | null>(null);
+
+    // Load cloud prompts when editing a cloud prompt
+    useEffect(() => {
+        if (activeLibrary === 'cloud') {
+            supabaseStorage.getPrompts().then(setCloudPrompts).catch(err => {
+                console.error('Failed to load cloud prompts:', err);
+                setCloudPrompts([]);
+            });
+        }
+    }, [activeLibrary]);
+
+    // Use prompts from the active library
+    const allPrompts = activeLibrary === 'cloud' ? cloudPrompts : (localPrompts || []);
 
     const handleReferenceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const refId = e.target.value;
@@ -164,6 +182,7 @@ export function Block({ block, currentPromptId, onUpdate, onDelete, depth = 0, i
                                                 key={child.id}
                                                 block={child}
                                                 currentPromptId={currentPromptId}
+                                                activeLibrary={activeLibrary}
                                                 onUpdate={onUpdate}
                                                 onDelete={onDelete}
                                                 dropIndicator={dropIndicator}

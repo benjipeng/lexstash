@@ -1,11 +1,21 @@
 import { db } from '@/lib/db';
+import { supabaseStorage } from '@/lib/storage/supabase';
 import { Block, Prompt } from '@/types/prompt';
 
-export async function compilePrompt(prompt: Prompt, values?: Record<string, string>): Promise<string> {
-    return compileBlocks(prompt.blocks, values);
+export async function compilePrompt(
+    prompt: Prompt,
+    values?: Record<string, string>,
+    library: 'local' | 'cloud' = 'local'
+): Promise<string> {
+    return compileBlocks(prompt.blocks, values, library, true);
 }
 
-export async function compileBlocks(blocks: Block[], values?: Record<string, string>, isRoot: boolean = true): Promise<string> {
+export async function compileBlocks(
+    blocks: Block[],
+    values?: Record<string, string>,
+    library: 'local' | 'cloud' = 'local',
+    isRoot: boolean = true
+): Promise<string> {
     let output = '';
 
     for (const block of blocks) {
@@ -26,7 +36,7 @@ export async function compileBlocks(blocks: Block[], values?: Record<string, str
             const closeTag = block.metadata?.tag ? `</${block.metadata.tag}>` : '';
 
             const childrenContent = block.children
-                ? await compileBlocks(block.children, values, false)
+                ? await compileBlocks(block.children, values, library, false)
                 : '';
 
             // Ensure childrenContent ends with a newline if it's not empty, so closeTag starts on a new line
@@ -38,9 +48,13 @@ export async function compileBlocks(blocks: Block[], values?: Record<string, str
         } else if (block.type === 'reference') {
             if (block.referenceId) {
                 try {
-                    const referencedPrompt = await db.prompts.get(block.referenceId);
+                    // Resolve from correct storage
+                    const referencedPrompt = library === 'local'
+                        ? await db.prompts.get(block.referenceId)
+                        : await supabaseStorage.getPrompt(block.referenceId);
+
                     if (referencedPrompt) {
-                        const refContent = await compileBlocks(referencedPrompt.blocks, values, false);
+                        const refContent = await compileBlocks(referencedPrompt.blocks, values, library, false);
                         output += refContent + '\n';
                     } else {
                         output += `{{Ref: ${block.referenceId} (Not Found)}}\n`;
