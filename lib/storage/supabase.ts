@@ -1,12 +1,12 @@
 import { StorageProvider } from './types';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { Prompt } from '@/types/prompt';
 
 const CLOUD_PROMPT_LIMIT = 30;
 
 export class SupabaseStorage implements StorageProvider {
     name: 'cloud' = 'cloud';
-    private supabase = createClient();
+    private supabase = supabase;
 
     async getPrompts(userId?: string): Promise<Prompt[]> {
         // If userId is provided, we could filter by it, but RLS handles visibility mostly.

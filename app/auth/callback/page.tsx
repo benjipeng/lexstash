@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
 
 function AuthCallbackContent() {
@@ -25,7 +25,6 @@ function AuthCallbackContent() {
 
             if (code) {
                 setStatus('Exchanging code for session...');
-                const supabase = createClient();
                 const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
                 if (error) {
@@ -47,7 +46,6 @@ function AuthCallbackContent() {
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
                 if (hashParams.get('access_token')) {
                     setStatus('Implicit flow detected. Attempting to set session...');
-                    const supabase = createClient();
                     const { data, error } = await supabase.auth.getSession();
                     if (data.session) {
                         setStatus('Session found! Redirecting...');
