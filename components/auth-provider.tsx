@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase/client';
+import { requireSupabase } from '@/lib/supabase/client';
+import { cloudEnabled } from '@/lib/features';
 
 interface AuthContextType {
     user: User | null;
@@ -17,11 +18,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(cloudEnabled);
 
     const isSigningOut = useRef(false);
 
     useEffect(() => {
+        if (!cloudEnabled) return;
+
+        const supabase = requireSupabase();
+        let unsubscribe: (() => void) | undefined;
+
         const initAuth = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!isSigningOut.current) {
@@ -37,15 +43,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setLoading(false);
             });
 
-            return () => subscription.unsubscribe();
+            unsubscribe = () => subscription.unsubscribe();
         };
 
         initAuth();
+
+        return () => unsubscribe?.();
     }, []);
 
     // ... signInWithGoogle ...
 
     const signOut = async () => {
+        if (!cloudEnabled) {
+            alert('Cloud sync is disabled in this build.');
+            return;
+        }
+
+        const supabase = requireSupabase();
         console.log('Signing out...');
         isSigningOut.current = true; // Block updates
 
@@ -68,6 +82,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signInWithGoogle = async () => {
+        if (!cloudEnabled) {
+            alert('Cloud sync is disabled in this build.');
+            return;
+        }
+
+        const supabase = requireSupabase();
         // Construct the URL based on the current location to handle basePath automatically
         // If we are at /lexstash/login, 'auth/callback' -> /lexstash/auth/callback
         // If we use '/auth/callback', it goes to /auth/callback (stripping /lexstash)

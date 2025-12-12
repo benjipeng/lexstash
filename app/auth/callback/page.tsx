@@ -2,8 +2,9 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { requireSupabase } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { cloudEnabled } from '@/lib/features';
 
 function AuthCallbackContent() {
     const router = useRouter();
@@ -13,6 +14,12 @@ function AuthCallbackContent() {
 
     useEffect(() => {
         const handleAuthCallback = async () => {
+            if (!cloudEnabled) {
+                setStatus('Cloud sync is disabled in this build.');
+                return;
+            }
+
+            const supabase = requireSupabase();
             const code = searchParams.get('code');
             const next = searchParams.get('next') ?? '/';
             const errorParam = searchParams.get('error');
@@ -90,6 +97,26 @@ function AuthCallbackContent() {
 }
 
 export default function AuthCallbackPage() {
+    const router = useRouter();
+
+    if (!cloudEnabled) {
+        return (
+            <div className="flex h-screen flex-col items-center justify-center gap-4 p-4">
+                <p className="text-lg font-medium">Cloud Sync Disabled</p>
+                <p className="text-sm text-muted-foreground text-center max-w-md">
+                    This build is running in local‑only mode. Enable cloud sync by setting
+                    <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code> and providing Supabase keys at build time, then rebuild/redeploy.
+                </p>
+                <button
+                    onClick={() => router.push('/')}
+                    className="text-sm underline"
+                >
+                    Back to app
+                </button>
+            </div>
+        );
+    }
+
     return (
         <Suspense fallback={
             <div className="flex h-screen items-center justify-center">

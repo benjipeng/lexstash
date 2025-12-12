@@ -10,6 +10,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { canAddReference } from '@/lib/graph';
 import { supabaseStorage } from '@/lib/storage/supabase';
 import { Prompt } from '@/types/prompt';
+import { cloudEnabled } from '@/lib/features';
 
 interface BlockProps {
     block: BlockType;
@@ -26,16 +27,17 @@ interface BlockProps {
 }
 
 export function Block({ block, currentPromptId, activeLibrary = 'local', onUpdate, onDelete, depth = 0, isOverlay, dropIndicator }: BlockProps) {
+    const effectiveLibrary: 'local' | 'cloud' = cloudEnabled ? activeLibrary : 'local';
     const [isExpanded, setIsExpanded] = useState(true);
     const [isValidReference, setIsValidReference] = useState(true);
 
     useEffect(() => {
         if (block.type === 'reference' && block.referenceId && currentPromptId) {
-            canAddReference(currentPromptId, block.referenceId, activeLibrary).then(setIsValidReference);
+            canAddReference(currentPromptId, block.referenceId, effectiveLibrary).then(setIsValidReference);
         } else {
             setIsValidReference(true);
         }
-    }, [block.referenceId, currentPromptId, block.type, activeLibrary]);
+    }, [block.referenceId, currentPromptId, block.type, effectiveLibrary]);
 
     const {
         attributes,
@@ -53,16 +55,18 @@ export function Block({ block, currentPromptId, activeLibrary = 'local', onUpdat
 
     // Load cloud prompts when editing a cloud prompt
     useEffect(() => {
-        if (activeLibrary === 'cloud') {
+        if (cloudEnabled && effectiveLibrary === 'cloud') {
             supabaseStorage.getPrompts().then(setCloudPrompts).catch(err => {
                 console.error('Failed to load cloud prompts:', err);
                 setCloudPrompts([]);
             });
+        } else {
+            setCloudPrompts([]);
         }
-    }, [activeLibrary]);
+    }, [effectiveLibrary]);
 
     // Use prompts from the active library
-    const allPrompts = activeLibrary === 'cloud' ? cloudPrompts : (localPrompts || []);
+    const allPrompts = effectiveLibrary === 'cloud' ? cloudPrompts : (localPrompts || []);
 
     const handleReferenceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const refId = e.target.value;
@@ -72,7 +76,7 @@ export function Block({ block, currentPromptId, activeLibrary = 'local', onUpdat
         }
 
         if (currentPromptId) {
-            const isSafe = await canAddReference(currentPromptId, refId);
+            const isSafe = await canAddReference(currentPromptId, refId, effectiveLibrary);
             if (!isSafe) {
                 setError('Circular dependency detected! Cannot add this reference.');
                 return;

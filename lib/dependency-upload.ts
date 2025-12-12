@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { supabaseStorage } from '@/lib/storage/supabase';
 import { Prompt } from '@/types/prompt';
 import { getAllReferences } from '@/lib/graph';
+import { cloudEnabled } from '@/lib/features';
 
 export interface UploadResult {
     needsConfirmation: boolean;
@@ -54,6 +55,9 @@ export async function getDependencyTree(promptId: string): Promise<string[]> {
  * @throws Error if quota would be exceeded or references are broken
  */
 export async function uploadWithDependencies(promptId: string): Promise<UploadResult> {
+    if (!cloudEnabled) {
+        throw new Error('Cloud sync is disabled in this build.');
+    }
     // 1. Get dependency tree
     const toUpload = await getDependencyTree(promptId);
 
@@ -104,6 +108,9 @@ export async function uploadWithDependencies(promptId: string): Promise<UploadRe
  * @throws Error if any upload fails (local copies remain intact)
  */
 export async function executeUpload(prompts: Prompt[]): Promise<void> {
+    if (!cloudEnabled) {
+        throw new Error('Cloud sync is disabled in this build.');
+    }
     // Upload all prompts first (don't delete local yet)
     for (const prompt of prompts) {
         await supabaseStorage.savePrompt({

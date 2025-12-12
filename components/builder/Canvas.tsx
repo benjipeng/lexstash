@@ -30,6 +30,7 @@ import {
 } from '@dnd-kit/sortable';
 import { Plus, Eye, Cloud, HardDrive, UploadCloud } from 'lucide-react';
 import { PreviewDialog } from './PreviewDialog';
+import { cloudEnabled } from '@/lib/features';
 
 interface CanvasProps {
     prompt?: Prompt;
@@ -527,7 +528,7 @@ export function Canvas({ prompt, onSave, activeLibrary, onUpload, onLibraryChang
                 </div>
 
                 <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar pt-1">
-                    {activeLibrary && (
+                    {cloudEnabled && activeLibrary && (
                         <>
                             <button
                                 onClick={() => {
@@ -552,7 +553,7 @@ export function Canvas({ prompt, onSave, activeLibrary, onUpload, onLibraryChang
                     )}
 
                     {/* Upload Button */}
-                    {activeLibrary === 'local' && onUpload && prompt && (
+                    {cloudEnabled && activeLibrary === 'local' && onUpload && prompt && (
                         <>
                             <button
                                 onClick={() => onUpload(prompt)}

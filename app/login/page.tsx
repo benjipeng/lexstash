@@ -7,6 +7,7 @@ import { Logo } from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { cloudEnabled } from '@/lib/features';
 
 export default function LoginPage() {
     const { signInWithGoogle, user, loading } = useAuth();
@@ -22,6 +23,32 @@ export default function LoginPage() {
         return (
             <div className="flex h-screen items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (!cloudEnabled) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-muted/50 p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <div className="flex justify-center mb-4">
+                            <div className="scale-150">
+                                <Logo />
+                            </div>
+                        </div>
+                        <CardTitle className="text-2xl">Cloud Sync Disabled</CardTitle>
+                        <CardDescription>
+                            This build is running in local‑only mode. To enable cloud sync, set
+                            <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code> and provide Supabase keys at build time, then rebuild/redeploy.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button className="w-full" size="lg" onClick={() => router.push('/')}>
+                            Back to app
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
@@ -52,7 +79,7 @@ export default function LoginPage() {
                         Sign in with Google
                     </Button>
                     <div className="mt-4 text-center text-sm text-muted-foreground">
-                        <p>Don't have an account? It will be created automatically.</p>
+                        <p>Don&apos;t have an account? It will be created automatically.</p>
                     </div>
                 </CardContent>
             </Card>

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db';
 import { Prompt } from '@/types/prompt';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FileText, Search, Plus, Settings, LogIn, LogOut, Cloud, HardDrive, Trash2 } from 'lucide-react';
+import { FileText, Search, Plus, Settings, LogIn, LogOut, Cloud, CloudOff, HardDrive, Trash2 } from 'lucide-react';
 import { supabaseStorage } from '@/lib/storage/supabase';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Logo } from '@/components/Logo';
@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { DataManagementModal } from '@/components/DataManagementModal';
 import { useAuth } from '@/components/auth-provider';
+import { cloudEnabled } from '@/lib/features';
+import { CloudDisabledModal } from '@/components/CloudDisabledModal';
 
 
 import { useRouter } from 'next/navigation';
@@ -29,9 +31,13 @@ interface SidebarProps {
 export function Sidebar({ onSelectPrompt, onCreateNew, onShowWelcome, className, activeLibrary, onLibraryChange, cloudRefreshKey }: SidebarProps) {
     const router = useRouter();
     const [search, setSearch] = useState('');
-    const [colorTheme, setColorTheme] = useState('blue');
+    const [colorTheme, setColorTheme] = useState(() => {
+        if (typeof window === 'undefined') return 'blue';
+        return localStorage.getItem('color-theme') || 'blue';
+    });
     const [showDataModal, setShowDataModal] = useState(false);
     const [cloudPrompts, setCloudPrompts] = useState<Prompt[]>([]);
+    const [showCloudDisabledModal, setShowCloudDisabledModal] = useState(false);
     const { user, signOut } = useAuth();
 
 
@@ -48,14 +54,6 @@ export function Sidebar({ onSelectPrompt, onCreateNew, onShowWelcome, className,
         [search]
     );
 
-    // Load saved theme on mount
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('color-theme');
-        if (savedTheme) {
-            setColorTheme(savedTheme);
-        }
-    }, []);
-
     // Apply theme changes
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', colorTheme);
@@ -64,10 +62,7 @@ export function Sidebar({ onSelectPrompt, onCreateNew, onShowWelcome, className,
 
     // Load cloud prompts when user is authenticated
     useEffect(() => {
-        if (!user) {
-            setCloudPrompts([]);
-            return;
-        }
+        if (!cloudEnabled || !user) return;
 
         const loadCloudPrompts = async () => {
             const prompts = await supabaseStorage.getPrompts();
@@ -152,7 +147,7 @@ export function Sidebar({ onSelectPrompt, onCreateNew, onShowWelcome, className,
 
             <div className="flex-1 overflow-y-auto p-2 space-y-4">
                 {/* Cloud Library Section */}
-                {user && (
+                {cloudEnabled && user && (
                     <div className="space-y-1">
                         <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -279,7 +274,24 @@ export function Sidebar({ onSelectPrompt, onCreateNew, onShowWelcome, className,
                 </Button>
 
                 <div className="pt-2 border-t">
-                    {user ? (
+                    {!cloudEnabled ? (
+                        <>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full gap-2"
+                                onClick={() => setShowCloudDisabledModal(true)}
+                                title="This build runs local‑only"
+                            >
+                                <CloudOff size={14} />
+                                Local Mode
+                            </Button>
+                            <CloudDisabledModal
+                                isOpen={showCloudDisabledModal}
+                                onClose={() => setShowCloudDisabledModal(false)}
+                            />
+                        </>
+                    ) : user ? (
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
                                 {user.email?.charAt(0).toUpperCase()}

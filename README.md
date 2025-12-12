@@ -56,10 +56,15 @@
 
 ### Optional: Enable Cloud Sync
 
-Cloud sync is off unless you configure Supabase keys.
+Cloud sync is local‑first optional. It is enabled only when Supabase is configured and the build flag allows it.
 
 1. Copy `.env.template` to `.env.local`.
 2. Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase project.
+3. (Optional) Explicitly control cloud mode with `NEXT_PUBLIC_ENABLE_CLOUD`:
+   - `true` → enable cloud features (requires keys)
+   - `false` → force local‑only mode even if keys exist
+
+Note: On GitHub Pages / static exports, `NEXT_PUBLIC_*` flags are evaluated at build time, so changing cloud mode requires a rebuild/redeploy.
 
 ## 📖 Usage
 

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { supabaseStorage } from '@/lib/storage/supabase';
 import { Block, Prompt } from '@/types/prompt';
+import { cloudEnabled } from '@/lib/features';
 
 export async function compilePrompt(
     prompt: Prompt,
@@ -16,6 +17,8 @@ export async function compileBlocks(
     library: 'local' | 'cloud' = 'local',
     isRoot: boolean = true
 ): Promise<string> {
+    const effectiveLibrary: 'local' | 'cloud' =
+        library === 'cloud' && cloudEnabled ? 'cloud' : 'local';
     let output = '';
 
     for (const block of blocks) {
@@ -36,7 +39,7 @@ export async function compileBlocks(
             const closeTag = block.metadata?.tag ? `</${block.metadata.tag}>` : '';
 
             const childrenContent = block.children
-                ? await compileBlocks(block.children, values, library, false)
+                ? await compileBlocks(block.children, values, effectiveLibrary, false)
                 : '';
 
             // Ensure childrenContent ends with a newline if it's not empty, so closeTag starts on a new line
@@ -49,12 +52,12 @@ export async function compileBlocks(
             if (block.referenceId) {
                 try {
                     // Resolve from correct storage
-                    const referencedPrompt = library === 'local'
+                    const referencedPrompt = effectiveLibrary === 'local'
                         ? await db.prompts.get(block.referenceId)
                         : await supabaseStorage.getPrompt(block.referenceId);
 
                     if (referencedPrompt) {
-                        const refContent = await compileBlocks(referencedPrompt.blocks, values, library, false);
+                        const refContent = await compileBlocks(referencedPrompt.blocks, values, effectiveLibrary, false);
                         output += refContent + '\n';
                     } else {
                         output += `{{Ref: ${block.referenceId} (Not Found)}}\n`;

@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { supabaseStorage } from "@/lib/storage/supabase";
 import { db } from "@/lib/db";
 import { uploadWithDependencies, executeUpload } from "@/lib/dependency-upload";
+import { cloudEnabled } from "@/lib/features";
 
 type ViewState = 'welcome' | 'new' | 'edit';
 
@@ -22,6 +23,15 @@ export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeLibrary, setActiveLibrary] = useState<'local' | 'cloud'>('local');
   const [cloudRefreshKey, setCloudRefreshKey] = useState(0);
+
+  const effectiveLibrary: 'local' | 'cloud' = cloudEnabled ? activeLibrary : 'local';
+  const safeSetActiveLibrary = (lib: 'local' | 'cloud') => {
+    if (!cloudEnabled) {
+      setActiveLibrary('local');
+      return;
+    }
+    setActiveLibrary(lib);
+  };
 
   const handleCreateNew = () => {
     setSelectedPrompt(undefined);
@@ -34,7 +44,7 @@ export default function Home() {
 
   const handleSelectPrompt = (prompt: Prompt, library: 'local' | 'cloud') => {
     setSelectedPrompt(prompt);
-    setActiveLibrary(library);
+    safeSetActiveLibrary(library);
     setView('edit');
     setIsMobileMenuOpen(false);
   };
@@ -48,7 +58,11 @@ export default function Home() {
 
   const handleSave = async (prompt: Prompt) => {
     try {
-      if (activeLibrary === 'cloud') {
+      if (effectiveLibrary === 'cloud') {
+        if (!cloudEnabled) {
+          alert("Cloud sync is disabled in this build.");
+          return;
+        }
         if (!user) {
           alert("Please sign in to save to cloud.");
           return;
@@ -70,6 +84,10 @@ export default function Home() {
   const { user } = useAuth();
 
   const handleUpload = async (prompt: Prompt) => {
+    if (!cloudEnabled) {
+      alert("Cloud sync is disabled in this build.");
+      return;
+    }
     if (!user) {
       alert("Please sign in to upload prompts.");
       return;
@@ -98,7 +116,7 @@ export default function Home() {
 
       // 4. Update UI
       setSelectedPrompt(undefined);
-      setActiveLibrary('cloud');
+      safeSetActiveLibrary('cloud');
       setView('welcome');
       setCloudRefreshKey(prev => prev + 1);
 
@@ -122,8 +140,8 @@ export default function Home() {
         onSelectPrompt={handleSelectPrompt}
         onCreateNew={handleCreateNew}
         onShowWelcome={handleShowWelcome}
-        activeLibrary={activeLibrary}
-        onLibraryChange={setActiveLibrary}
+        activeLibrary={effectiveLibrary}
+        onLibraryChange={safeSetActiveLibrary}
         cloudRefreshKey={cloudRefreshKey}
       />
 
@@ -138,8 +156,8 @@ export default function Home() {
               onSelectPrompt={handleSelectPrompt}
               onCreateNew={handleCreateNew}
               onShowWelcome={handleShowWelcome}
-              activeLibrary={activeLibrary}
-              onLibraryChange={setActiveLibrary}
+              activeLibrary={effectiveLibrary}
+              onLibraryChange={safeSetActiveLibrary}
               cloudRefreshKey={cloudRefreshKey}
             />
           </SheetContent>
@@ -179,9 +197,9 @@ export default function Home() {
                 key={selectedPrompt?.id || 'new'}
                 prompt={selectedPrompt}
                 onSave={handleSave}
-                activeLibrary={activeLibrary}
-                onUpload={handleUpload}
-                onLibraryChange={setActiveLibrary}
+                activeLibrary={effectiveLibrary}
+                onUpload={cloudEnabled ? handleUpload : undefined}
+                onLibraryChange={safeSetActiveLibrary}
               />
             </div>
           </>
@@ -212,9 +230,9 @@ export default function Home() {
                 key={selectedPrompt?.id || 'new'}
                 prompt={selectedPrompt}
                 onSave={handleSave}
-                activeLibrary={activeLibrary}
-                onUpload={handleUpload}
-                onLibraryChange={setActiveLibrary}
+                activeLibrary={effectiveLibrary}
+                onUpload={cloudEnabled ? handleUpload : undefined}
+                onLibraryChange={safeSetActiveLibrary}
               />
             </div>
           </>

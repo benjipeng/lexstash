@@ -1,19 +1,35 @@
 import { StorageProvider } from './types';
-import { supabase } from '@/lib/supabase/client';
+import { requireSupabase } from '@/lib/supabase/client';
+import { cloudEnabled } from '@/lib/features';
 import { Prompt } from '@/types/prompt';
 
 const CLOUD_PROMPT_LIMIT = 30;
 
+type SupabasePromptRow = {
+    id: string;
+    title: string;
+    description?: string | null;
+    tags?: string[] | null;
+    blocks?: Prompt['blocks'] | null;
+    created_at: string;
+    updated_at: string;
+};
+
 export class SupabaseStorage implements StorageProvider {
-    name: 'cloud' = 'cloud';
-    private supabase = supabase;
+    name = 'cloud' as const;
+    private get client() {
+        if (!cloudEnabled) {
+            throw new Error('Cloud sync is disabled in this build.');
+        }
+        return requireSupabase();
+    }
 
     async getPrompts(userId?: string): Promise<Prompt[]> {
         // If userId is provided, we could filter by it, but RLS handles visibility mostly.
         // However, for "My Prompts" vs "Public Prompts", we might need filters.
         // For now, let's just fetch all prompts visible to the user (RLS applied).
 
-        const { data, error } = await this.supabase
+        const { data, error } = await this.client
             .from('prompts')
             .select('*')
             .order('updated_at', { ascending: false });
@@ -24,7 +40,7 @@ export class SupabaseStorage implements StorageProvider {
     }
 
     async getPrompt(id: string): Promise<Prompt | undefined> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.client
             .from('prompts')
             .select('*')
             .eq('id', id)
@@ -36,7 +52,7 @@ export class SupabaseStorage implements StorageProvider {
 
     async savePrompt(prompt: Prompt): Promise<void> {
         // We need the current user ID to save
-        const { data: { user } } = await this.supabase.auth.getUser();
+        const { data: { user } } = await this.client.auth.getUser();
 
         if (!user) throw new Error('User not authenticated');
 
@@ -51,7 +67,7 @@ export class SupabaseStorage implements StorageProvider {
             );
         }
 
-        const { error } = await this.supabase
+        const { error } = await this.client
             .from('prompts')
             .upsert({
                 id: prompt.id,
@@ -70,7 +86,7 @@ export class SupabaseStorage implements StorageProvider {
     }
 
     async deletePrompt(id: string): Promise<void> {
-        const { error } = await this.supabase
+        const { error } = await this.client
             .from('prompts')
             .delete()
             .eq('id', id);
@@ -80,7 +96,7 @@ export class SupabaseStorage implements StorageProvider {
 
     async importPrompts(prompts: Prompt[]): Promise<void> {
         // Bulk insert
-        const { data: { user } } = await this.supabase.auth.getUser();
+        const { data: { user } } = await this.client.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
         // Check limit before importing
@@ -108,7 +124,7 @@ export class SupabaseStorage implements StorageProvider {
             updated_at: new Date(p.updatedAt).toISOString()
         }));
 
-        const { error } = await this.supabase
+        const { error } = await this.client
             .from('prompts')
             .upsert(rows);
 
@@ -117,10 +133,10 @@ export class SupabaseStorage implements StorageProvider {
 
     async clearAll(): Promise<void> {
         // Delete all prompts for this user (RLS will restrict to own prompts)
-        const { data: { user } } = await this.supabase.auth.getUser();
+        const { data: { user } } = await this.client.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { error } = await this.supabase
+        const { error } = await this.client
             .from('prompts')
             .delete()
             .eq('user_id', user.id);
@@ -128,7 +144,7 @@ export class SupabaseStorage implements StorageProvider {
         if (error) throw error;
     }
 
-    private mapToPrompt(row: any): Prompt {
+    private mapToPrompt(row: SupabasePromptRow): Prompt {
         return {
             id: row.id,
             title: row.title,
