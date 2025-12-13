@@ -148,7 +148,7 @@ export class SupabaseStorage implements StorageProvider {
         return {
             id: row.id,
             title: row.title,
-            description: row.description,
+            description: row.description ?? undefined,
             tags: row.tags || [],
             blocks: row.blocks || [],
             createdAt: new Date(row.created_at).getTime(),

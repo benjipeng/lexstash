@@ -56,15 +56,22 @@
 
 ### Optional: Enable Cloud Sync
 
-Cloud sync is local‑first optional. It is enabled only when Supabase is configured and the build flag allows it.
+Cloud sync is optional. It’s enabled when Supabase keys are present, unless you force local‑only mode with a build flag.
 
 1. Copy `.env.template` to `.env.local`.
 2. Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase project.
-3. (Optional) Explicitly control cloud mode with `NEXT_PUBLIC_ENABLE_CLOUD`:
+3. (Optional) Control cloud mode with `NEXT_PUBLIC_ENABLE_CLOUD`:
    - `true` → enable cloud features (requires keys)
    - `false` → force local‑only mode even if keys exist
 
-Note: On GitHub Pages / static exports, `NEXT_PUBLIC_*` flags are evaluated at build time, so changing cloud mode requires a rebuild/redeploy.
+Local‑only builds hide cloud UI and show a “Local Mode” indicator in the sidebar.
+
+Note: On GitHub Pages / static exports, `NEXT_PUBLIC_*` flags are evaluated at build time, so switching modes requires a rebuild/redeploy.
+
+### GitHub Actions
+
+- `ci.yml` runs two build checks: local‑only and cloud‑compile (dummy keys; compile validation only).
+- `deploy.yml` builds and deploys the static site to GitHub Pages.
 
 ## 📖 Usage
 

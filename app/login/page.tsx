@@ -37,13 +37,20 @@ export default function LoginPage() {
                                 <Logo />
                             </div>
                         </div>
-                        <CardTitle className="text-2xl">Cloud Sync Disabled</CardTitle>
+                        <CardTitle className="text-2xl">Local‑Only Mode</CardTitle>
                         <CardDescription>
-                            This build is running in local‑only mode. To enable cloud sync, set
-                            <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code> and provide Supabase keys at build time, then rebuild/redeploy.
+                            Cloud sync is disabled in this build.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
+                        <div className="text-sm text-muted-foreground space-y-2 mb-4">
+                            <p>To enable cloud sync:</p>
+                            <ol className="list-decimal pl-5 space-y-1">
+                                <li>Set <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code>.</li>
+                                <li>Add <code className="px-1">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.</li>
+                                <li>Rebuild/redeploy (flags are baked into static exports).</li>
+                            </ol>
+                        </div>
                         <Button className="w-full" size="lg" onClick={() => router.push('/')}>
                             Back to app
                         </Button>

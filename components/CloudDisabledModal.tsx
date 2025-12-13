@@ -12,27 +12,37 @@ interface CloudDisabledModalProps {
 export function CloudDisabledModal({ isOpen, onClose }: CloudDisabledModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Cloud Sync Disabled</DialogTitle>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                    <DialogTitle>Local‑Only Mode</DialogTitle>
                     <DialogDescription>
-                        This build is running in local‑only mode. Your prompts are stored in your browser and never leave your device.
+                        Cloud sync and Google sign‑in are turned off in this build. Your prompts stay in your browser and never leave your device.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-3 text-sm">
-                    <p>To enable cloud sync and Google sign‑in:</p>
-                    <ol className="list-decimal pl-5 space-y-1">
-                        <li>
-                            Set <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code> in your build environment (for GitHub Pages, edit your workflow).
-                        </li>
-                        <li>
-                            Provide <code className="px-1">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
-                        </li>
-                        <li>
-                            Rebuild and redeploy — static exports read env flags at build time.
-                        </li>
-                    </ol>
+                <div className="space-y-4 text-sm">
+                    <div>
+                        <p className="font-medium mb-2">Enable cloud sync</p>
+                        <ol className="list-decimal pl-5 space-y-2">
+                            <li>
+                                Set <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code> in your build environment.
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    Local dev: add it to <code className="px-1">.env.local</code> and restart <code className="px-1">npm run dev</code>.
+                                    GitHub Pages: set an Actions variable and redeploy.
+                                </div>
+                            </li>
+                            <li>
+                                Provide your Supabase keys:
+                                <ul className="list-disc pl-5 mt-1 space-y-1">
+                                    <li><code className="px-1">NEXT_PUBLIC_SUPABASE_URL</code></li>
+                                    <li><code className="px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+                                </ul>
+                            </li>
+                            <li>
+                                Rebuild and redeploy. Static exports read env flags at build time.
+                            </li>
+                        </ol>
+                    </div>
                 </div>
 
                 <DialogFooter>
@@ -42,4 +52,3 @@ export function CloudDisabledModal({ isOpen, onClose }: CloudDisabledModalProps)
         </Dialog>
     );
 }
-

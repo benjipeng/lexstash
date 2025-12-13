@@ -102,11 +102,15 @@ export default function AuthCallbackPage() {
     if (!cloudEnabled) {
         return (
             <div className="flex h-screen flex-col items-center justify-center gap-4 p-4">
-                <p className="text-lg font-medium">Cloud Sync Disabled</p>
-                <p className="text-sm text-muted-foreground text-center max-w-md">
-                    This build is running in local‑only mode. Enable cloud sync by setting
-                    <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code> and providing Supabase keys at build time, then rebuild/redeploy.
-                </p>
+                <p className="text-lg font-medium">Local‑Only Mode</p>
+                <div className="text-sm text-muted-foreground text-center max-w-md space-y-2">
+                    <p>Cloud sync is disabled in this build.</p>
+                    <ol className="list-decimal pl-5 space-y-1 text-left">
+                        <li>Set <code className="px-1">NEXT_PUBLIC_ENABLE_CLOUD=true</code>.</li>
+                        <li>Add <code className="px-1">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.</li>
+                        <li>Rebuild/redeploy (flags are baked into static exports).</li>
+                    </ol>
+                </div>
                 <button
                     onClick={() => router.push('/')}
                     className="text-sm underline"
