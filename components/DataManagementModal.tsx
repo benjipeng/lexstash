@@ -114,6 +114,9 @@ export function DataManagementModal({ isOpen, onClose }: DataManagementModalProp
                     <DialogTitle>Data Management</DialogTitle>
                     <DialogDescription>
                         Manage your local prompt library. Your data is stored in your browser.
+                        <span className="block mt-1 text-xs">
+                            DevTools: IndexedDB → LexstashDB → prompts
+                        </span>
                     </DialogDescription>
                 </DialogHeader>
 
